@@ -1,0 +1,50 @@
+Line:          Type:          Lexeme:             Token:          Scope:
+{1             INT               gcd              FUNC_NAME            0}
+   {1             INT               a                VAR_RETURN           1}
+   {1             INT               b                VAR_RETURN           1}
+   {2             KEYWORD           if               STATEMENT            1}
+   {2             INT               a                VAR_REFERENCE        1}
+   {2             ==                ==               RELOP                1}
+   {2             INT               b                VAR_REFERENCE        1}
+      {2             KEYWORD           then             then                 2}
+      {3             KEYWORD           return           STATEMENT            2}
+      {3             INT               a                VAR_REFERENCE        2}
+   {4             KEYWORD           fi               fi                   1}
+   {5             KEYWORD           if               STATEMENT            1}
+   {5             INT               a                VAR_REFERENCE        1}
+   {5             >                 >                RELOP                1}
+   {5             INT               b                VAR_REFERENCE        1}
+      {5             KEYWORD           then             then                 2}
+      {6             KEYWORD           return           STATEMENT            2}
+      {6             INT               gcd              FUNC_CALL            2}
+      {6             INT               b                VAR_REFERENCE        2}
+      {6             INT               b                VAR_REFERENCE        2}
+      {7             KEYWORD           else             else                 2}
+      {8             KEYWORD           return           STATEMENT            2}
+      {8             INT               gcd              FUNC_CALL            2}
+      {8             INT               a                VAR_REFERENCE        2}
+      {8             INT               b                VAR_REFERENCE        2}
+   {9             KEYWORD           fi               fi                   1}
+{11            INT               a                VAR_DECLARE          0}
+{11            INT               b                VAR_DECLARE          0}
+{12            KEYWORD           print            STATEMENT            0}
+{12            INT               gcd              FUNC_CALL            0}
+{12            INT               21               LITERAL              0}
+{12            INT               15               LITERAL              0}
+{13            INT               a                VAR_ASSIGN           0}
+{13            INT               b                VAR_REFERENCE        0}
+{13            +                 +                OPERATOR             0}
+{13            INT               9                LITERAL              0}
+{13            *                 *                OPERATOR             0}
+{13            INT               a                VAR_REFERENCE        0}
+{14            KEYWORD           print            STATEMENT            0}
+{14            DOUBLE            45.555           LITERAL              0}
+{15            KEYWORD           print            STATEMENT            0}
+{15            INT               2                LITERAL              0}
+{15            *                 *                OPERATOR             0}
+{15            INT               gcd              FUNC_CALL            0}
+{15            INT               21               LITERAL              0}
+{15            INT               28               LITERAL              0}
+{15            +                 +                OPERATOR             0}
+{15            INT               6                LITERAL              0}
+{15            .                 .                EOF                  0}

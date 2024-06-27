@@ -1,0 +1,16 @@
+and
+def
+do
+double
+else
+fed
+fi
+if
+int
+not
+od
+or
+print
+return
+then
+while

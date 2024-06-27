@@ -1,0 +1,70 @@
+B main
+gcd:
+Begin: 8
+push {LR}
+push {FP}
+b = fp + 8
+a = fp + 12
+
+cmp a, b
+BE lab0
+lab0:
+
+fp-4 = a
+
+b exitgcd
+
+cmp a, b
+BG lab1
+b lab2
+
+lab1:
+
+push {b}
+push {b}
+t0 = BL gcd
+pop {b}
+pop {b}
+
+fp-4 = t0
+b exitgcd
+
+lab2:
+
+push {a}
+push {b}
+t1 = BL gcd
+pop {b}
+pop {a}
+
+fp-4 = t1
+b exitgcd
+
+exit gcd:
+
+pop {FP}
+pop {PC}
+
+main:
+Begin: 24
+push {21}
+push {15}
+t0 = BL gcd
+pop {15}
+pop {21}
+
+print t0
+t1 = 9 * a
+a = b + t1
+
+print 45.555
+
+push {21}
+push {28}
+t2 = BL gcd
+pop {28}
+pop {21}
+
+t3   * 2
+print t3 + 6
+
