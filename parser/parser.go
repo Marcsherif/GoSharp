@@ -7,8 +7,30 @@ import (
 
 var debug = false
 
-var nonTerminals []string
-var terminals []string
+// Symbol order matches the rows and columns of parsingTable.
+var nonTerminals = [...]string{
+	"<program>", "<fdecls>", "<fdecls_prime>", "<fdec>", "<params>",
+	"<params_prime>", "<fname>", "<declarations>", "<declarations_prime>", "<decl>",
+	"<type>", "<varlist>", "<varlist_prime>", "<statement_seq>", "<statement_seq_prime>",
+	"<statement>", "<statement_if>", "<expr>", "<expr_prime>", "<term>",
+	"<term_prime>", "<factor>", "<factor_prime>", "<exprseq>", "<exprseq_prime>",
+	"<bexpr>", "<bexpr_prime>", "<bterm>", "<bterm_prime>", "<bfactor>",
+	"<bfactor_paren>", "<comp>", "<var>", "<var_prime>", "<letter>",
+	"<digit>", "<id>", "<id_prime>", "<number>",
+}
+
+var terminals = [...]string{
+	"%", "=", "+", "-", "*",
+	"/", "<=", "<", ">", ">=",
+	"==", "<>", ",", ";", "(",
+	")", "[", "]", ".", "az",
+	"and", "def", "do", "double", "else",
+	"fed", "fi", "if", "int", "not",
+	"od", "or", "print", "return", "then",
+	"while", "#", "IDENT", "INT", "DOUBLE",
+	"$",
+}
+
 var pArr []Parse
 
 type Parse struct {
@@ -79,9 +101,8 @@ func setToken(input []Parse, index int, top string) (string) {
         return input[index].Token
 }
 
-func parse(input []Parse) ([]Parse, string) {
-	terminals = append(terminals, "<program>", "<fdecls>", "<fdecls_prime>", "<fdec>", "<params>", "<params_prime>", "<fname>", "<declarations>", "<declarations_prime>", "<decl>", "<type>", "<varlist>", "<varlist_prime>", "<statement_seq>", "<statement_seq_prime>", "<statement>", "<statement_if>", "<expr>", "<expr_prime>", "<term>", "<term_prime>", "<factor>", "<factor_prime>", "<exprseq>", "<exprseq_prime>", "<bexpr>", "<bexpr_prime>", "<bterm>", "<bterm_prime>", "<bfactor>", "<bfactor_paren>", "<comp>", "<var>", "<var_prime>", "<letter>", "<digit>", "<id>", "<id_prime>", "<number>")
-	nonTerminals = append(nonTerminals, "%", "=", "+", "-", "*", "/", "<=", "<", ">", ">=", "==", "<>", ",", ";", "(", ")", "[", "]", ".", "az", "and", "def", "do", "double", "else", "fed", "fi", "if", "int", "not", "od", "or", "print", "return", "then", "while", "#", "IDENT", "INT", "DOUBLE", "$")
+func SyntaxCheck() ([]Parse, string) {
+	input := pArr
 
     input = append(input, Parse{Literal:"$"})
 
@@ -117,8 +138,8 @@ func parse(input []Parse) ([]Parse, string) {
 			stack = stack[:len(stack)-1]
 			index++
 		} else {
-			row := getIndex(top, terminals)
-			col := getIndex(curr, nonTerminals)
+			row := getIndex(top, nonTerminals[:])
+			col := getIndex(curr, terminals[:])
 //            println("Row: ", row, "Col", col)
 			value := parsingTable[row][col]
 
@@ -178,10 +199,6 @@ func reverse(numbers []string) []string {
 		newNumbers = append(newNumbers, numbers[i])
 	}
 	return newNumbers
-}
-
-func SyntaxCheck() ([]Parse, string){
-    return parse(pArr)
 }
 
 var parsingTable = [][]string{

@@ -1,10 +1,5 @@
 package token
 
-import (
-	"bufio"
-	"os"
-)
-
 type TokenType string
 
 const (
@@ -54,28 +49,33 @@ const (
 	THEN    = "THEN"
 )
 
+var keywords = map[string]struct{}{
+	"and":		{},
+	"def":		{},
+	"do":		{},
+	"double":	{},
+	"else":		{},
+	"fed":		{},
+	"fi":		{},
+	"if":		{},
+	"int":		{},
+	"not":		{},
+	"od":		{},
+	"or":		{},
+	"print":	{},
+	"return":	{},
+	"then":		{},
+	"while":	{},
+}
+
 type Token struct {
 	Type    TokenType
 	Literal string
 }
 
 func LookupIdent(ident string) TokenType {
-	file, err := os.Open("./keywords/keywords.txt")
-    _ = err
-	defer file.Close()
-
-	var keywords []string
-	scanner := bufio.NewScanner(file)
-
-	for scanner.Scan() {
-		keyword := scanner.Text()
-		keywords = append(keywords, keyword)
+	if _, ok := keywords[ident]; ok {
+		return KEYWORD
 	}
-
-    for _, keyword := range keywords {
-        if ident == keyword {
-            return KEYWORD
-        }
-    }
 	return IDENT
 }

@@ -3,10 +3,13 @@ package lexer
 import (
 	"bufio"
 	"ezsharp/token"
+	"fmt"
 	"os"
 	"strconv"
 	"strings"
 )
+
+var TT [][]int
 
 type Lexer struct {
 	input        string
@@ -16,34 +19,37 @@ type Lexer struct {
     line         int
 }
 
-func readState() ([][]int) {
+func loadTransitionTable() () {
     file, err := os.Open("./Table/table.txt")
     check(err)
     defer file.Close()
 
     scanner := bufio.NewScanner(file)
-    check(err)
-    n := 21
-    myArray := make([][]int, n)
+
+	asciiLength := 128
+    stateLength := 21
+    TT = make([][]int, stateLength)
 
     i := 0
     for scanner.Scan() {
         line := scanner.Text()
         values := strings.Fields(line)
-        myArray[i] = make([]int, 128)
+        TT[i] = make([]int, asciiLength)
 
         for j, valueStr := range values {
             value, err := strconv.Atoi(valueStr)
             check(err)
-            myArray[i][j] = value
+            TT[i][j] = value
         }
         i++
-        if i == n {
+        if i == stateLength {
             break
         }
     }
 
-    return myArray
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr, "Error reading transition table:", err)
+	}
 }
 
 func check(e error) {
@@ -54,6 +60,7 @@ func check(e error) {
 
 
 func New(input string) *Lexer {
+    loadTransitionTable()
 	l := &Lexer{input: input}
 	l.readChar()
 	return l
@@ -63,7 +70,6 @@ func (l *Lexer) NextToken() (token.Token, int) {
 	var tok token.Token
 
 
-    TT := readState()
     l.skipWhitespace()
     state := 0
     str := ""
@@ -75,47 +81,57 @@ func (l *Lexer) NextToken() (token.Token, int) {
         case 0:
             state = TT[state][int(l.ch)]
 
-            if l.ch == '%'{
-                tok = newToken(token.PERCENT)
-                goto next
-            } else if l.ch == '*' {
-                tok = newToken(token.ASTERISK)
-                goto next
-            } else if l.ch == '+' {
-                tok = newToken(token.PLUS)
-                goto next
-            } else if l.ch == '-' {
-                tok = newToken(token.MINUS)
-                goto next
-            } else if l.ch == '/' {
-                tok = newToken(token.SLASH)
-                goto next
-            } else if l.ch == ';' {
-                tok = newToken(token.SEMICOLON)
-                goto next
-            } else if l.ch == ',' {
-                tok = newToken(token.COMMA)
-                goto next
-            } else if l.ch == '.' {
-                tok = newToken(token.EOF)
-                goto next
-            } else if l.ch == '(' {
-                tok = newToken(token.LPAREN)
-                goto next
-            } else if l.ch == ')' {
-                tok = newToken(token.RPAREN)
-                goto next
-            } else if l.ch == '[' {
-                tok = newToken(token.LBRACE)
-                goto next
-            } else if l.ch == ']' {
-                tok = newToken(token.RBRACE)
-                goto next
-            }
-        case 1:
+			switch l.ch {
+			case '%':
+				tok = newToken(token.PERCENT)
+				goto next
+			case '*':
+				tok = newToken(token.ASTERISK)
+				goto next
+			case '+':
+				tok = newToken(token.PLUS)
+				goto next
+			case '-':
+				tok = newToken(token.MINUS)
+				goto next
+			case '/':
+				tok = newToken(token.SLASH)
+				goto next
+			case ';':
+				tok = newToken(token.SEMICOLON)
+				goto next
+			case ',':
+				tok = newToken(token.COMMA)
+				goto next
+			case '.':
+				tok = newToken(token.EOF)
+				goto next
+			case '(':
+				tok = newToken(token.LPAREN)
+				goto next
+			case ')':
+				tok = newToken(token.RPAREN)
+				goto next
+			case '[':
+				tok = newToken(token.LBRACE)
+				goto next
+			case ']':
+				tok = newToken(token.RBRACE)
+				goto next
+			}
+        case 1, 5, 8:
             l.readChar()
             l.skipWhitespace()
             state = TT[state][int(l.ch)]
+		case 11, 13, 15, 16, 17, 18:
+            str = str + string([]byte{l.ch})
+            l.readChar()
+            state = TT[state][int(l.ch)]
+        case 19, 21:
+            tok.Literal = str
+            tok.Type = token.DOUBLE
+            l.backChar()
+            goto next
         case 2:
             tok = newToken(token.LE)
 			goto next
@@ -126,10 +142,6 @@ func (l *Lexer) NextToken() (token.Token, int) {
             tok = newToken(token.LT)
             l.backChar()
             goto next
-        case 5:
-            l.readChar()
-            l.skipWhitespace()
-            state = TT[state][int(l.ch)]
         case 6:
             tok = newToken(token.EQ)
             goto next
@@ -137,10 +149,6 @@ func (l *Lexer) NextToken() (token.Token, int) {
             tok = newToken(token.ASSIGN)
             l.backChar()
             goto next
-        case 8:
-            l.readChar()
-            l.skipWhitespace()
-            state = TT[state][int(l.ch)]
         case 9:
             tok = newToken(token.GE)
 			goto next
@@ -148,53 +156,19 @@ func (l *Lexer) NextToken() (token.Token, int) {
             tok = newToken(token.GT)
             l.backChar()
 			goto next
-        case 11:
-            str = str + string([]byte{l.ch})
-            l.readChar()
-            state = TT[state][int(l.ch)]
         case 12:
             tok.Literal = str
             tok.Type = token.LookupIdent(tok.Literal)
             l.backChar()
             goto next
-        case 13:
-            str = str + string([]byte{l.ch})
-            l.readChar()
-            state = TT[state][int(l.ch)]
         case 14:
             str = str + string([]byte{l.ch})
             l.readChar()
             l.skipWhitespace()
             state = TT[state][int(l.ch)]
-        case 15:
-            str = str + string([]byte{l.ch})
-            l.readChar()
-            state = TT[state][int(l.ch)]
-        case 16:
-            str = str + string([]byte{l.ch})
-            l.readChar()
-            state = TT[state][int(l.ch)]
-        case 17:
-            str = str + string([]byte{l.ch})
-            l.readChar()
-            state = TT[state][int(l.ch)]
-        case 18:
-            str = str + string([]byte{l.ch})
-            l.readChar()
-            state = TT[state][int(l.ch)]
-        case 19:
-            tok.Literal = str
-            tok.Type = token.DOUBLE
-            l.backChar()
-            goto next
         case 20:
             tok.Literal = str
             tok.Type = token.INT
-            l.backChar()
-            goto next
-        case 21:
-            tok.Literal = str
-            tok.Type = token.DOUBLE
             l.backChar()
             goto next
         }
@@ -223,14 +197,6 @@ func (l *Lexer) readChar() {
 	l.readPosition += 1
 }
 
-func (l *Lexer) peekChar() byte {
-	if l.readPosition >= len(l.input) {
-		return 0
-	} else {
-		return l.input[l.readPosition]
-	}
-}
-
 func (l *Lexer) backChar() {
 	if l.readPosition >= len(l.input) {
         l.ch = 0
@@ -239,30 +205,6 @@ func (l *Lexer) backChar() {
         l.readPosition -= 1
         l.ch = l.input[l.position]
     }
-}
-
-func (l *Lexer) readIdentifier() string {
-	position := l.position
-	for isLetter(l.ch) || isDigit(l.ch) {
-		l.readChar()
-	}
-	return l.input[position:l.position]
-}
-
-func (l *Lexer) readNumber() string {
-	position := l.position
-	for isDigit(l.ch) {
-		l.readChar()
-	}
-	return l.input[position:l.position]
-}
-
-func isLetter(ch byte) bool {
-	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z'
-}
-
-func isDigit(ch byte) bool {
-	return '0' <= ch && ch <= '9'
 }
 
 func newToken(tokenType token.TokenType) token.Token {

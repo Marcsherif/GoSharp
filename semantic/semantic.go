@@ -67,21 +67,19 @@ func AnalyseSemantics(input []parser.Parse) ([]parser.Parse) {
 
     output := make([]parser.Parse, 0)
 
-if debug {
-    println("Line:          Type:          Lexeme:             Token:          Scope:")
-}
+	if debug {
+		println("Line:          Type:          Lexeme:             Token:          Scope:")
+	}
 
 	for i := 0; i < len(input); i++ {
 		curr := input[i]
 
         if curr.Type == "(" {
-            if input[i+1].Token == "EXPR" {
-            }
-
             if prev := peekSymbol(symbolTable, currScope); prev.Token != "nil" {
-                if prev.Token == "FUNC_NAME" {
+                switch prev.Token {
+				case "FUNC_NAME":
                     curr.Token = "SCOPE_START"
-                } else if prev.Token == "FUNC_CALL" {
+                case "FUNC_CALL":
                     returnValue = prev.Type
                 }
             }
@@ -105,29 +103,22 @@ if debug {
             }
             NewScope(&currScope)
             space += 3
-            break
 
         case "SCOPE_END":
             ReturnScope(&symbolTable, &currScope)
             space -= 3
-            break
 
         case "INT_DECL":
-            //declType = "INT_IDENT"
             declType = "INT"
-            break
 
         case "DOUBLE_DECL":
-            //declType = "DOUBLE_IDENT"
             declType = "DOUBLE"
-            break
 
         case "FNAME":
             curr.Type = declType
             Declare(&symbolTable, curr, currScope, "FUNC_NAME")
             funcReturn = 1
             flag = 1
-            break
 
         case "VAR":
             temp, vType := Lookup(symbolTable, curr)
@@ -153,26 +144,25 @@ if debug {
                     }
                 } else {
                     if input[i+2].Type == "INT" || input[i+2].Type == "DOUBLE" {
-                        if vType.Type != input[i+2].Type {
+                        if vType.Type == input[i+2].Type {
+                            curr.Type = vType.Type
+                            Declare(&symbolTable, curr, currScope, "VAR_ASSIGN")
+                        } else {
                             typeError(symbol.Line+1, vType.Literal, input[i+2].Literal)
                             goto error
-                        } else {
-                            curr.Type = vType.Type
-                            Declare(&symbolTable, curr, currScope, "VAR_ASSIGN")
                         }
                     } else if _, nType := Lookup(symbolTable, input[i+2]);
-                        nType.Type != vType.Type {
-                            typeError(symbol.Line+1, curr.Literal, nType.Literal)
-                            goto error
-                        } else {
+                        nType.Type == vType.Type {
                             curr.Type = vType.Type
                             Declare(&symbolTable, curr, currScope, "VAR_ASSIGN")
+                        } else {
+                            typeError(symbol.Line+1, curr.Literal, nType.Literal)
+                            goto error
                         }
                     }
             }
 
             flag = 1
-            break
 
         case "EXPR":
             if curr.Type == "INT" || curr.Type == "DOUBLE" {
@@ -181,6 +171,7 @@ if debug {
 
             if curr.Type == "IDENT" {
                 temp, definition := Lookup(symbolTable, curr)
+
                 if temp == -1 {
                     if symbol := peekSymbol(symbolTable, currScope); symbol.Token != "nil" {
                         fmt.Printf("Error:%d:Unidentified identifier %s\n", symbol.Line, curr.Literal)
@@ -191,7 +182,8 @@ if debug {
                 if definition.Token == "FUNC_NAME" {
 
                     if symbol := peekSymbol(symbolTable, currScope); symbol.Token != "nil" {
-                        if symbol.Token == "VAR_ASSIGN" {
+                        switch symbol.Token {
+						case "VAR_ASSIGN":
                             if symbol.Type == definition.Type {
 
                                 curr.Type = definition.Type
@@ -200,7 +192,7 @@ if debug {
                                 typeError(symbol.Line+1, symbol.Literal, definition.Literal)
                                 goto error
                             }
-                        } else if symbol.Token == "STATEMENT" || symbol.Token == "OPERATOR" {
+                        case "STATEMENT", "OPERATOR":
                             curr.Type = definition.Type
                             Declare(&symbolTable, curr, currScope, "FUNC_CALL")
                         }
@@ -216,12 +208,10 @@ if debug {
             }
 
             flag = 1
-            break
 
         case "STATEMENT":
             Declare(&symbolTable, curr, currScope, curr.Token)
             flag = 1
-            break
 
         case "RELOP":
             nType := input[i+1]
@@ -242,7 +232,6 @@ if debug {
 
             Declare(&symbolTable, curr, currScope, curr.Token)
             flag = 1
-            break
 
         case "OPERATOR":
             nType := input[i+1]
@@ -283,11 +272,24 @@ if debug {
 
             Declare(&symbolTable, curr, currScope, curr.Token)
             flag = 1
-            break
 
         default:
-            break
         }
+
+		switch curr.Literal {
+		case "while":
+			curr.Token = "WHILE"
+		case "do":
+			curr.Token = "DO"
+		case "od":
+			curr.Token = "OD"
+		}
+
+		switch curr.Token {
+		case "WHILE", "DO", "OD":
+			curr.Scope = currScope
+			output = append(output, curr)
+		}
 
         if curr.Literal == "then" {
             Declare(&symbolTable, curr, currScope, "then")

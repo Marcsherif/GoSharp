@@ -1,11 +1,11 @@
-package tac
+package codegen
 
 import (
+	"strings"
 	"ezsharp/parser"
 	"fmt"
 )
 
-var debug = false
 type OpCode string
 var funcName []string
 
@@ -198,7 +198,7 @@ func generateTAC(postfix []string, t *int) (string) {
             tacReturn += fmt.Sprintf("t%d = BL %s\n", *t, i)
             tacReturn += fmt.Sprintf("pop {%s}\n", expr2)
             tacReturn += fmt.Sprintf("pop {%s}\n", expr1)
-            tacReturn += fmt.Sprintf("\n")
+            tacReturn += "\n"
             if len(exp_stack) > 0 {
                 exp_stack = exp_stack[:expStackLen-1]
             }
@@ -254,11 +254,22 @@ func generateTAC(postfix []string, t *int) (string) {
         }
     }
 
-    tacReturn += fmt.Sprintf("\n")
+    tacReturn += "\n"
     return tacReturn
 }
 
 func IR(symbolTable []parser.Parse) (string){
+    // The legacy TAC generator expects the stream without loop markers.
+    records := make([]parser.Parse, 0, len(symbolTable))
+    for _, record := range symbolTable {
+        switch record.Token {
+        case "WHILE", "DO", "OD":
+            continue
+        }
+        records = append(records, record)
+    }
+    symbolTable = records
+
     funcCount := 0
     labCount := 0
     var exprCount int
@@ -273,27 +284,20 @@ func IR(symbolTable []parser.Parse) (string){
     cmpLocation := make([]int, 10)
     cmpFuncLocation := make([]int, 10)
     cmpArr := make([]string, 10)
-    var fileOutput string
+    var fileOutput strings.Builder
 
-    if debug == true {
-        fmt.Printf("B main\n")
-    }
-    fileOutput += fmt.Sprintf("B main\n")
+    fmt.Fprintf(&fileOutput, "B main\n")
 
     if symbolTable[0].Token != "FUNC_NAME" {
-        if debug == true {
-            fmt.Printf("main:\n")
-            funcName[funcCount] += fmt.Sprintf("main:\n")
-        }
-
-        fileOutput += fmt.Sprintf("B main\n")
+        fmt.Fprintf(&fileOutput, "B main\n")
     }
 
     for i := range symbolTable {
+
         if symbolTable[i].Token == "FUNC_NAME" {
             if symbolTable[i].Literal != "main" {
                 funcName[funcCount] += fmt.Sprintf("%s:\n", symbolTable[i].Literal)
-                tacCode[funcCount] += fmt.Sprintf("push {LR}\npush {FP}\n")
+                tacCode[funcCount] += "push {LR}\npush {FP}\n"
             }
             if symbolTable[i].Literal == "main" {
                 funcName[funcCount] += fmt.Sprintf("%s:\n", symbolTable[i].Literal)
@@ -310,21 +314,21 @@ func IR(symbolTable []parser.Parse) (string){
 //                    if symbolTable[i-j].Literal == "," { continue }
                     tacCode[funcCount] += fmt.Sprintf("%s = fp + %d\n", symbolTable[i-j].Literal, (j+1)*4)
                 }
-                tacCode[funcCount] += fmt.Sprintf("\n")
+                tacCode[funcCount] += "\n"
             }
         }
 
         if i > 0 && symbolTable[i].Scope == 0 {
             if symbolTable[i-1].Scope == 1 {
                 tacCode[funcCount] += fmt.Sprintf("exit %s\n", funcName[funcCount])
-                tacCode[funcCount] += fmt.Sprintf("pop {FP}\npop {PC}\n\n")
+                tacCode[funcCount] += "pop {FP}\npop {PC}\n\n"
 
                 paramCount[funcCount] = 0
                 t[funcCount] = 0
                 funcCount++
 
                 if funcName[funcCount] != "main:\n" {
-                    funcName[funcCount] += fmt.Sprintf("main:\n")
+                    funcName[funcCount] += "main:\n"
                 }
             }
         }
@@ -375,7 +379,7 @@ func IR(symbolTable []parser.Parse) (string){
         if symbolTable[i].Token == "else" {
             fName := funcName[funcCount][:len(funcName[funcCount])-2]
             tacCode[funcCount] += fmt.Sprintf("b exit%s\n", fName)
-            tacCode[funcCount] += fmt.Sprintf("\n")
+            tacCode[funcCount] += "\n"
             cmpArr[cmpCounter] += fmt.Sprintf("b lab%d\n\n", labCount)
             tacCode[funcCount] += fmt.Sprintf("lab%d:\n\n", labCount)
             labCount++
@@ -385,7 +389,7 @@ func IR(symbolTable []parser.Parse) (string){
             cmpCounter++
             fName := funcName[funcCount][:len(funcName[funcCount])-2]
             tacCode[funcCount] += fmt.Sprintf("b exit%s\n", fName)
-            tacCode[funcCount] += fmt.Sprintf("\n")
+            tacCode[funcCount] += "\n"
         }
 
         if symbolTable[i].Token == "VAR_DECLARE" || symbolTable[i].Token == "VAR_RETURN" {
@@ -404,16 +408,10 @@ func IR(symbolTable []parser.Parse) (string){
     }
 
     for f := 0; f < funcCount+1; f++ {
-//        tacCode[f] = tacCode[f][:cmpLocation[f]] + cmpArr[f] + tacCode[f][cmpLocation[f]:]
-        if debug == true {
-            fmt.Print(funcName[f])
-            fmt.Printf("Begin: %d\n", (t[f]+varCount[f])*4)
-            fmt.Print(tacCode[f])
-        }
-        fileOutput += fmt.Sprint(funcName[f])
-        fileOutput += fmt.Sprintf("Begin: %d\n", (t[f]+varCount[f])*4)
-        fileOutput += fmt.Sprint(tacCode[f])
+        fmt.Fprint(&fileOutput, funcName[f])
+        fmt.Fprintf(&fileOutput, "Begin: %d\n", (t[f]+varCount[f])*4)
+        fmt.Fprint(&fileOutput, tacCode[f])
     }
-    return fileOutput
+    return fileOutput.String()
 }
 
