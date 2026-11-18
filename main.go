@@ -3,13 +3,23 @@ package main
 import (
 	"bufio"
 	"errors"
+	"ezsharp/codegen"
 	"ezsharp/lexer"
 	"ezsharp/parser"
 	"ezsharp/semantic"
-	"ezsharp/codegen"
 	"ezsharp/token"
+	"flag"
 	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+)
+
+var (
+	emitLLVM = true
+	goSharpBuild = true
+	goSharpRun = true
+	sourcePath string
 )
 
 func check(e error) {
@@ -25,6 +35,18 @@ func createFile(path string) (*os.File) {
 }
 
 func main() {
+	flag.BoolVar(&emitLLVM, "ir", false, "keep the generated LLVM IR")
+	flag.Parse()
+
+	if flag.NArg() != 1 {
+		fmt.Fprintf(os.Stderr, "Usage: %s [-ir] <source.cp>\n",
+			filepath.Base(os.Args[0]))
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	sourcePath = flag.Arg(0)
+
 	lexerPass()
 	parsedData, err := syntaxPass()
 	if err != nil {
@@ -36,12 +58,16 @@ func main() {
 		fmt.Fprintln(os.Stderr, "failed to get symbol table")
 		return
 	}
-	IRPass(symbolTable)
+	tacPass(symbolTable)
+	err = llvmPass(symbolTable)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
 }
 
 func lexerPass() {
-	// Pass an ezSharp source file to the compiler
-	sourceFile, err := os.ReadFile(os.Args[1])
+	sourceFile, err := os.ReadFile(sourcePath)
     check(err)
 
     lexerFile  := createFile("./output/lexerOutput.txt")
@@ -125,10 +151,55 @@ func semanticPass(parserArr []parser.Parse) ([]parser.Parse) {
 	return nil
 }
 
-func IRPass(symbolTable []parser.Parse) {
+func tacPass(symbolTable []parser.Parse) {
     tacFile    := createFile("./output/tacOutput.txt")
 	defer tacFile.Close()
 
-	t1 := codegen.IR(symbolTable)
+	t1 := codegen.TacCodegen(symbolTable)
 	tacFile.WriteString(t1)
+}
+
+func llvmPass(symbolTable []parser.Parse) (error) {
+	build := goSharpBuild || goSharpRun
+	if !emitLLVM && !build {
+		return nil
+	}
+
+	irPath := "./output/llvmOutput.ll"
+	exePath := "./output/objectOutput.exe"
+
+	ir := codegen.LLVMCodegen(symbolTable)
+	if err := os.WriteFile(irPath, []byte(ir), 0644); err != nil {
+		return fmt.Errorf("write LLVM IR: %w", err)
+	}
+
+	if !build {
+		return nil
+	}
+
+	cmd := exec.Command("clang", "-Wno-override-module", irPath, "-o", exePath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("clang failed: %w", err)
+	}
+
+	if goSharpRun {
+		cmd := exec.Command(exePath)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("run compiled program: %w", err)
+		}
+	}
+
+	if !emitLLVM {
+		if err := os.Remove(irPath); err != nil {
+			return fmt.Errorf("remove temporary LLVM IR: %w", err)
+		}
+	}
+
+
+	return nil
 }

@@ -258,7 +258,7 @@ func generateTAC(postfix []string, t *int) (string) {
     return tacReturn
 }
 
-func IR(symbolTable []parser.Parse) (string){
+func TacCodegen(symbolTable []parser.Parse) (string){
     // The legacy TAC generator expects the stream without loop markers.
     records := make([]parser.Parse, 0, len(symbolTable))
     for _, record := range symbolTable {
