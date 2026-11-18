@@ -168,7 +168,10 @@ func llvmPass(symbolTable []parser.Parse) (error) {
 	irPath := "./output/llvmOutput.ll"
 	exePath := "./output/objectOutput.exe"
 
-	ir := codegen.LLVMCodegen(symbolTable)
+	ir, err := codegen.LLVMCodegen(symbolTable)
+	if err != nil {
+		return fmt.Errorf("generate LLVM IR: %w", err)
+	}
 	if err := os.WriteFile(irPath, []byte(ir), 0644); err != nil {
 		return fmt.Errorf("write LLVM IR: %w", err)
 	}

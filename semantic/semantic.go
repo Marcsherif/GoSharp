@@ -314,8 +314,8 @@ func AnalyseSemantics(input []parser.Parse) ([]parser.Parse) {
         if flag == 1 {
             if symbol := peekSymbol(symbolTable, currScope); symbol.Token != "nil" {
                 symbol.Scope = currScope
-                if currScope > 0 { fmt.Printf("%*s", symbol.Scope*3, "") }
                 if debug {
+					if currScope > 0 { fmt.Printf("%*s", symbol.Scope*3, "") }
                     fmt.Printf("{%-12d  %-16s  %-16s %-20s %10d}\n", symbol.Line, symbol.Type,
                     symbol.Literal, symbol.Token, symbol.Scope)
                 }

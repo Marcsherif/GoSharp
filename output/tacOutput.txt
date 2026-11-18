@@ -1,7 +1,20 @@
 B main
 B main
-Begin: 4
+Begin: 8
 x = 0
 
+i = i < 10
+
+t0 = i * i
+x = x + t0
+
+i = i + 1
+
+exit 
+pop {FP}
+pop {PC}
+
+main:
+Begin: 0
 print x
 
